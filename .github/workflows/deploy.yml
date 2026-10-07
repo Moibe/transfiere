@@ -1,0 +1,31 @@
+name: deploy transfiere 🚀
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch: # permite correrlo a mano desde la pestaña Actions
+
+jobs:
+    deploy:
+        name: pull · build · pm2
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: install ssh key
+              run: |
+                  install -m 600 -D /dev/null ~/.ssh/id_rsa
+                  echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+                  ssh-keyscan -H ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
+
+            # nvm no está en el PATH de una shell SSH no-interactiva, así que lo cargamos
+            # explícito. La cadena con && aborta si algo falla (no reinicia con build roto).
+            # `npm run db:migrate` aplica las migraciones pendientes al local.db del droplet.
+            # BODY_SIZE_LIMIT: adapter-node rechaza cuerpos > 512 KB por default y las subidas
+            # van en chunks de 16 MB (src/lib/upload.ts), así que se sube a 64M.
+            - name: deploy on droplet
+              run: |
+                  ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm use node >/dev/null && { [ -d ~/code/transfiere ] || git clone git@github.com:Moibe/transfiere.git ~/code/transfiere; } && cd ~/code/transfiere && git checkout main && git pull origin main && npm ci && npm run db:migrate && npm run build && { [ -f .env ] && set -a && . ./.env && set +a || true; } && export PORT="${PORT:-4500}" HOST="${HOST:-127.0.0.1}" BODY_SIZE_LIMIT="${BODY_SIZE_LIMIT:-64M}" && { pm2 delete transfiere >/dev/null 2>&1 || true; } && pm2 start build/index.js --name transfiere --update-env && pm2 save && sleep 2 && curl -fsS -o /dev/null -w "local http=%{http_code}\n" http://127.0.0.1:4500/'
+
+            - name: cleanup
+              run: rm -rf ~/.ssh
