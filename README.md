@@ -26,7 +26,7 @@ nginx (repo `nx-routes`).
 ```bash
 npm install
 npm run db:migrate   # crea local.db con las migraciones de ./drizzle
-npm run dev          # http://localhost:4500 (mismo puerto que en el droplet)
+npm run dev          # http://localhost:7711 (mismo puerto que en el droplet)
 ```
 
 La clave de dev es la `UPLOAD_PASSWORD` del `.env` local. Si cambias el schema

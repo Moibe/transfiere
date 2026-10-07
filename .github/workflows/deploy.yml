@@ -25,7 +25,7 @@ jobs:
             # van en chunks de 16 MB (src/lib/upload.ts), así que se sube a 64M.
             - name: deploy on droplet
               run: |
-                  ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm use node >/dev/null && { [ -d ~/code/transfiere ] || git clone git@github.com:Moibe/transfiere.git ~/code/transfiere; } && cd ~/code/transfiere && git checkout main && git pull origin main && npm ci && npm run db:migrate && npm run build && { [ -f .env ] && set -a && . ./.env && set +a || true; } && export PORT="${PORT:-4500}" HOST="${HOST:-127.0.0.1}" BODY_SIZE_LIMIT="${BODY_SIZE_LIMIT:-64M}" && { pm2 delete transfiere >/dev/null 2>&1 || true; } && pm2 start build/index.js --name transfiere --update-env && pm2 save && sleep 2 && curl -fsS -o /dev/null -w "local http=%{http_code}\n" http://127.0.0.1:4500/'
+                  ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm use node >/dev/null && { [ -d ~/code/transfiere ] || git clone git@github.com:Moibe/transfiere.git ~/code/transfiere; } && cd ~/code/transfiere && git checkout main && git pull origin main && npm ci && npm run db:migrate && npm run build && { [ -f .env ] && set -a && . ./.env && set +a || true; } && export PORT="${PORT:-7711}" HOST="${HOST:-127.0.0.1}" BODY_SIZE_LIMIT="${BODY_SIZE_LIMIT:-64M}" && { pm2 delete transfiere >/dev/null 2>&1 || true; } && pm2 start build/index.js --name transfiere --update-env && pm2 save && sleep 2 && curl -fsS -o /dev/null -w "local http=%{http_code}\n" http://127.0.0.1:7711/'
 
             - name: cleanup
               run: rm -rf ~/.ssh

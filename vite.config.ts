@@ -4,10 +4,10 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	// Mismo puerto que tendrá en el droplet (4500). strictPort: si está ocupado, falla en vez de
+	// Mismo puerto que tendrá en el droplet (7711). strictPort: si está ocupado, falla en vez de
 	// brincar a otro puerto en silencio.
-	server: { port: 4500, strictPort: true },
-	preview: { port: 4500, strictPort: true },
+	server: { port: 7711, strictPort: true },
+	preview: { port: 7711, strictPort: true },
 	plugins: [
 		tailwindcss(),
 		sveltekit({
