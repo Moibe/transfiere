@@ -12,6 +12,10 @@ Mi propio WeTransfer: subir un par de archivos pesados y mandar un link. Vive en
   "Descargar todo (.zip)". **Nunca pide clave.** Si se abre mientras todavía se está subiendo,
   se actualiza sola.
 - **`/transferencias`** — lo que has mandado, descargas por archivo y borrar (con confirmación).
+- **`/clientes`** (piloto de negocio) — das de alta negocios con nombre, color, logo y clave.
+  Cada uno tiene su portal en **`/c/<slug>`** donde sube a su nombre y ve solo sus envíos; los
+  links que manda salen con su logo, su nombre y su color. Borrar un negocio borra también
+  todas sus transferencias.
 - Las transferencias **se borran solas al expirar** (limpieza al arrancar y cada hora).
 - Las descargas soportan `Range` (pausar/reanudar) y se streamean directo del disco.
 
@@ -41,7 +45,8 @@ Las variables del servidor están documentadas en `.env.example` (`.env` se arma
 
 ## Dónde viven los datos
 
-- `local.db` — metadata de transferencias y archivos (SQLite).
+- `local.db` — metadata de negocios, transferencias y archivos (SQLite).
+- `data/logos/<clientId>` — el logo de cada negocio (PNG, JPG o WebP; SVG no se acepta).
 - `data/<transferId>/<fileId>` — los bytes de cada archivo.
 
 Los dos están gitignoreados; en el droplet persisten entre deploys porque el repo se reusa.

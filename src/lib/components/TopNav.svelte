@@ -1,9 +1,10 @@
 <script lang="ts">
 	// Barra superior "de vidrio" (versión blanca) con tilt 3D al pasar el mouse + responsive
-	// (en móvil colapsa a solo-íconos). Los items solo se muestran con la clave puesta: quien
-	// recibe un link ve nada más la marca.
+	// (en móvil colapsa a solo-íconos). Los items solo se muestran con sesión: quien recibe un
+	// link ve nada más la marca. En páginas de un negocio (page.data.client) muestra SU marca.
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import type { PublicClient } from '$lib/types';
 	import Icon from './Icon.svelte';
 
 	let { authed = false }: { authed?: boolean } = $props();
@@ -24,10 +25,27 @@
 		tiltY = 0;
 	}
 
-	const items = [
-		{ href: '/', label: 'Enviar', icon: 'send' },
-		{ href: '/transferencias', label: 'Transferencias', icon: 'list' }
-	];
+	const client = $derived(page.data.client as PublicClient | undefined);
+	const clientAuthed = $derived(Boolean(page.data.clientAuthed));
+
+	const items = $derived.by(() => {
+		if (client) {
+			if (!clientAuthed) return [];
+			return [
+				{ href: `/c/${client.slug}`, label: 'Enviar', icon: 'send' },
+				{ href: `/c/${client.slug}/transferencias`, label: 'Transferencias', icon: 'list' }
+			];
+		}
+		if (!authed) return [];
+		return [
+			{ href: '/', label: 'Enviar', icon: 'send' },
+			{ href: '/transferencias', label: 'Transferencias', icon: 'list' },
+			{ href: '/clientes', label: 'Clientes', icon: 'users' }
+		];
+	});
+	const showLogout = $derived(client ? clientAuthed : authed);
+	const logoutAction = $derived(client ? `/c/${client.slug}?/salir` : '/?/salir');
+	const brandHref = $derived(client ? (clientAuthed ? `/c/${client.slug}` : page.url.pathname) : '/');
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -37,12 +55,24 @@
 	onmousemove={handleMove}
 	onmouseleave={handleLeave}
 >
-	<a href="/" class="brand" aria-label="Inicio">
-		<span class="brand-ico" aria-hidden="true"><Icon name="arrow-up" size={14} stroke={3} /></span>
-		<span class="brand-title text-grad">Transfiere</span>
+	<a href={brandHref} class="brand" aria-label={client ? client.name : 'Inicio'}>
+		{#if client?.logoUrl}
+			<img class="brand-logo" src={client.logoUrl} alt={client.name} />
+		{:else}
+			<span class="brand-ico" aria-hidden="true">
+				{#if client}
+					{client.name.charAt(0).toUpperCase()}
+				{:else}
+					<Icon name="arrow-up" size={14} stroke={3} />
+				{/if}
+			</span>
+		{/if}
+		{#if !client?.logoUrl}
+			<span class="brand-title text-grad">{client ? client.name : 'Transfiere'}</span>
+		{/if}
 	</a>
 
-	{#if authed}
+	{#if items.length}
 		<nav class="topnav-nav">
 			{#each items as it (it.href)}
 				<a
@@ -55,7 +85,9 @@
 				</a>
 			{/each}
 		</nav>
-		<form class="salir" method="POST" action="/?/salir" use:enhance>
+	{/if}
+	{#if showLogout}
+		<form class="salir" method="POST" action={logoutAction} use:enhance>
 			<button class="nav-item" type="submit" title="Salir">
 				<span class="nav-ico" aria-hidden="true"><Icon name="logout" size={16} /></span>
 				<span class="nav-label">Salir</span>
@@ -110,9 +142,17 @@
 		justify-content: center;
 		color: #fff;
 		background: var(--brand-grad);
+		font-weight: 800;
+		font-size: 0.85rem;
 		box-shadow:
 			inset 0 1px 0 rgba(255, 255, 255, 0.4),
-			0 4px 12px rgba(255, 45, 117, 0.35);
+			0 4px 12px rgba(24, 24, 27, 0.18);
+	}
+	.brand-logo {
+		height: 34px;
+		max-width: 180px;
+		object-fit: contain;
+		flex-shrink: 0;
 	}
 	.brand-title {
 		font-size: 1.25rem;

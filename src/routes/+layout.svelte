@@ -2,25 +2,32 @@
 	// Tailwind v4 + tokens de shadcn. El fondo blanco + orbs y los :global(body) de abajo GANAN:
 	// los estilos :global de Svelte van sin @layer, así que pisan el @layer base de Tailwind.
 	import '../app.css';
+	import { page } from '$app/state';
 	import favicon from '$lib/assets/favicon.svg';
+	import { brandStyle } from '$lib/brand';
 	import Orbs from '$lib/components/Orbs.svelte';
 	import TopNav from '$lib/components/TopNav.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
+
+	// Páginas de un negocio (su portal y los links que manda): su color pinta toda la marca.
+	const themeStyle = $derived(brandStyle(page.data.client?.color));
 </script>
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<Orbs />
-<TopNav authed={data.authed} />
-<main>
-	<div class="work-scroll">
-		{@render children()}
-	</div>
-</main>
+<div class="theme" style={themeStyle}>
+	<Orbs />
+	<TopNav authed={data.authed} />
+	<main>
+		<div class="work-scroll">
+			{@render children()}
+		</div>
+	</main>
+</div>
 
 <style>
 	:global(:root) {
@@ -63,6 +70,10 @@
 	:global(::-webkit-scrollbar-thumb:hover) {
 		background: rgba(24, 24, 27, 0.45);
 		background-clip: padding-box;
+	}
+
+	.theme {
+		display: contents;
 	}
 
 	/* Panel principal glass (blanco) — mismo lenguaje que la barra. A todo el ancho. */

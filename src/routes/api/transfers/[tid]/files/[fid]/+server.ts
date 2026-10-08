@@ -3,7 +3,7 @@ import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { requireAuth } from '$lib/server/auth';
+import { canTouch, requireActor, type Actor } from '$lib/server/clients';
 import { isValidId } from '$lib/server/ids';
 import { filePath, sizeOnDisk } from '$lib/server/storage';
 import { getTransfer, isExpired, markFileProgress, MAX_CHUNK } from '$lib/server/transfers';
@@ -16,10 +16,12 @@ import { getTransfer, isExpired, markFileProgress, MAX_CHUNK } from '$lib/server
 // Un chunk a la vez por archivo: evita que un reintento tempranero escriba encimado.
 const writing = new Set<string>();
 
-async function loadFile(tid: string | undefined, fid: string | undefined) {
+async function loadFile(actor: Actor, tid: string | undefined, fid: string | undefined) {
 	if (!isValidId(tid) || !isValidId(fid)) error(404, 'No existe');
 	const transfer = await getTransfer(tid);
-	if (!transfer || isExpired(transfer)) error(404, 'Esta transferencia no existe o ya expiró');
+	if (!transfer || isExpired(transfer) || !canTouch(actor, transfer)) {
+		error(404, 'Esta transferencia no existe o ya expiró');
+	}
 	const file = transfer.files.find((f) => f.id === fid);
 	if (!file) error(404, 'Ese archivo no es de esta transferencia');
 	return { transfer, file };
@@ -27,16 +29,16 @@ async function loadFile(tid: string | undefined, fid: string | undefined) {
 
 // GET — cuántos bytes hay ya en disco (el cliente lo consulta para resincronizarse).
 export const GET: RequestHandler = async (event) => {
-	requireAuth(event);
-	const { transfer, file } = await loadFile(event.params.tid, event.params.fid);
+	const actor = await requireActor(event);
+	const { transfer, file } = await loadFile(actor, event.params.tid, event.params.fid);
 	const uploaded = file.complete ? file.size : await sizeOnDisk(filePath(transfer.id, file.id));
 	return json({ uploaded, size: file.size, complete: file.complete });
 };
 
 // PUT — appendea un chunk.
 export const PUT: RequestHandler = async (event) => {
-	requireAuth(event);
-	const { transfer, file } = await loadFile(event.params.tid, event.params.fid);
+	const actor = await requireActor(event);
+	const { transfer, file } = await loadFile(actor, event.params.tid, event.params.fid);
 	if (transfer.status !== 'uploading') error(409, 'Esta transferencia ya está cerrada');
 	if (file.complete) return json({ uploaded: file.size, complete: true });
 

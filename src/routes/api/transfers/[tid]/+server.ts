@@ -1,5 +1,5 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit';
-import { requireAuth } from '$lib/server/auth';
+import { canTouch, requireActor } from '$lib/server/clients';
 import { isValidId } from '$lib/server/ids';
 import { deleteTransfer, getTransfer, isExpired, publicView } from '$lib/server/transfers';
 
@@ -19,8 +19,9 @@ export const GET: RequestHandler = async ({ params }) => {
 
 // DELETE /api/transfers/<tid> — borra archivos + metadata. Solo con la clave.
 export const DELETE: RequestHandler = async (event) => {
-	requireAuth(event);
+	const actor = await requireActor(event);
 	const transfer = await load(event.params.tid);
+	if (!canTouch(actor, transfer)) error(404, 'Este link no existe');
 	await deleteTransfer(transfer.id);
 	return json({ ok: true });
 };

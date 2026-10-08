@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import Gate from '$lib/components/Gate.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import MadeBy from '$lib/components/MadeBy.svelte';
 	import Uploader from '$lib/components/Uploader.svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
-	let entering = $state(false);
 </script>
 
 <svelte:head>
@@ -24,39 +23,7 @@
 		</section>
 	</div>
 {:else if !data.authed}
-	<div class="page">
-		<section class="card gate">
-			<div class="gate-ico"><Icon name="lock" size={26} /></div>
-			<h1>Hola 👋</h1>
-			<p class="muted">Escribe la clave para mandar archivos.</p>
-			<form
-				method="POST"
-				action="?/entrar"
-				use:enhance={() => {
-					entering = true;
-					return async ({ update }) => {
-						await update();
-						entering = false;
-					};
-				}}
-			>
-				<input
-					class="input"
-					type="password"
-					name="clave"
-					placeholder="Clave"
-					autocomplete="current-password"
-					required
-				/>
-				{#if form?.error}
-					<p class="error" role="alert">{form.error}</p>
-				{/if}
-				<button class="btn btn-primary" type="submit" disabled={entering}>
-					{entering ? 'Un momento…' : 'Entrar'}
-				</button>
-			</form>
-		</section>
-	</div>
+	<Gate error={form?.error} />
 {:else}
 	<Uploader />
 {/if}
@@ -81,20 +48,9 @@
 		display: grid;
 		place-items: center;
 		color: #fff;
-		background: var(--brand-grad);
-		box-shadow: 0 10px 24px rgba(255, 45, 117, 0.3);
-		margin-bottom: 0.4rem;
-	}
-	.gate-ico.warn {
 		background: linear-gradient(135deg, #f59e0b, #ff7a1a);
 		box-shadow: 0 10px 24px rgba(245, 158, 11, 0.3);
-	}
-	form {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		gap: 0.7rem;
-		margin-top: 1rem;
+		margin-bottom: 0.4rem;
 	}
 	code {
 		font-size: 0.9em;

@@ -22,15 +22,27 @@
 </script>
 
 <svelte:head>
-	<title>{pluralFiles(t.files.length)} para ti · Transfiere</title>
+	<title>
+		{pluralFiles(t.files.length)} para ti · {data.client ? data.client.name : 'Transfiere'}
+	</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="page">
 	<section class="card receive">
-		<div class="hero-ico" class:pending={!ready}>
-			<Icon name={ready ? 'download' : 'upload-cloud'} size={30} />
-		</div>
+		{#if !data.client?.logoUrl}
+			<div class="hero-ico" class:pending={!ready}>
+				<Icon name={ready ? 'download' : 'upload-cloud'} size={30} />
+			</div>
+		{/if}
+		{#if data.client}
+			<p class="sender">
+				{#if data.client.logoUrl}
+					<img class="sender-logo" src={data.client.logoUrl} alt={data.client.name} />
+				{/if}
+				<span><strong>{data.client.name}</strong> te envió</span>
+			</p>
+		{/if}
 		<h1>
 			{#if ready}
 				Tienes {pluralFiles(t.files.length)} <span class="text-grad">esperándote</span>
@@ -111,6 +123,20 @@
 		background: var(--brand-grad);
 		box-shadow: 0 10px 26px rgba(255, 45, 117, 0.3);
 		margin-bottom: 0.4rem;
+	}
+	.sender {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
+		color: var(--ink-soft);
+		font-size: 0.95rem;
+		margin-bottom: 0.2rem;
+	}
+	.sender-logo {
+		max-width: 180px;
+		max-height: 64px;
+		object-fit: contain;
 	}
 	.hero-ico.pending {
 		background: linear-gradient(135deg, var(--vivid-violet), var(--vivid-cyan));

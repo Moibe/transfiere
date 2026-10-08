@@ -27,6 +27,8 @@ export async function createTransfer(input: {
 	message: string | null;
 	days: number;
 	files: NewFileInput[];
+	/** null = la manda el dueño */
+	clientId: string | null;
 }): Promise<{ id: string; files: { id: string; name: string; size: number }[] }> {
 	const id = newId(10);
 	const days = Math.min(Math.max(Math.round(input.days) || DEFAULT_DAYS, 1), MAX_DAYS);
@@ -51,6 +53,7 @@ export async function createTransfer(input: {
 		tx.insert(transfers)
 			.values({
 				id,
+				clientId: input.clientId,
 				message: input.message,
 				totalSize,
 				createdAt: now,
@@ -66,14 +69,16 @@ export async function createTransfer(input: {
 export async function getTransfer(id: string): Promise<TransferWithFiles | undefined> {
 	return db.query.transfers.findFirst({
 		where: eq(transfers.id, id),
-		with: { files: { orderBy: (f, { asc }) => [asc(f.position)] } }
+		with: { files: { orderBy: (f, { asc }) => [asc(f.position)] }, client: true }
 	});
 }
 
-export async function listTransfers(): Promise<TransferWithFiles[]> {
+/** Todas (dueño) o solo las de un cliente. */
+export async function listTransfers(clientId?: string): Promise<TransferWithFiles[]> {
 	return db.query.transfers.findMany({
+		where: clientId ? eq(transfers.clientId, clientId) : undefined,
 		orderBy: (t, { desc }) => [desc(t.createdAt)],
-		with: { files: { orderBy: (f, { asc }) => [asc(f.position)] } }
+		with: { files: { orderBy: (f, { asc }) => [asc(f.position)] }, client: true }
 	});
 }
 
@@ -152,6 +157,7 @@ export function publicView(t: TransferWithFiles): PublicTransfer {
 export function adminView(t: TransferWithFiles): AdminTransfer {
 	return {
 		...publicView(t),
+		clientName: t.client?.name ?? null,
 		files: t.files.map((f) => ({
 			...publicFile(f),
 			downloads: f.downloads,

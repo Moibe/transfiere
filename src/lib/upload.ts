@@ -27,7 +27,16 @@ export type UploadOptions = {
 	days: number;
 	signal: AbortSignal;
 	onProgress: (p: ProgressInfo) => void;
+	/** Portal de un negocio: sube como ese cliente (header x-transfiere-client). */
+	clientSlug?: string;
 };
+
+export const CLIENT_HEADER = 'x-transfiere-client';
+
+/** Headers extra para que la API sepa en nombre de quién se sube. */
+export function clientHeaders(clientSlug?: string): Record<string, string> {
+	return clientSlug ? { [CLIENT_HEADER]: clientSlug } : {};
+}
 
 export class UploadAborted extends Error {
 	constructor() {
@@ -95,7 +104,7 @@ async function errorMessage(res: Response, fallback: string): Promise<string> {
 async function createTransfer(opts: UploadOptions): Promise<CreatedTransfer> {
 	const res = await fetch('/api/transfers', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json', ...clientHeaders(opts.clientSlug) },
 		signal: opts.signal,
 		body: JSON.stringify({
 			message: opts.message,
@@ -107,15 +116,28 @@ async function createTransfer(opts: UploadOptions): Promise<CreatedTransfer> {
 	return res.json();
 }
 
-async function fetchUploaded(tid: string, fid: string, signal: AbortSignal): Promise<number> {
-	const res = await fetch(`/api/transfers/${tid}/files/${fid}`, { signal, cache: 'no-store' });
+async function fetchUploaded(
+	tid: string,
+	fid: string,
+	signal: AbortSignal,
+	clientSlug?: string
+): Promise<number> {
+	const res = await fetch(`/api/transfers/${tid}/files/${fid}`, {
+		signal,
+		cache: 'no-store',
+		headers: clientHeaders(clientSlug)
+	});
 	if (!res.ok) throw new Error(await errorMessage(res, 'No se pudo consultar el avance'));
 	const j = (await res.json()) as { uploaded: number };
 	return j.uploaded;
 }
 
-async function finish(tid: string, signal: AbortSignal): Promise<void> {
-	const res = await fetch(`/api/transfers/${tid}/finish`, { method: 'POST', signal });
+async function finish(tid: string, signal: AbortSignal, clientSlug?: string): Promise<void> {
+	const res = await fetch(`/api/transfers/${tid}/finish`, {
+		method: 'POST',
+		signal,
+		headers: clientHeaders(clientSlug)
+	});
 	if (!res.ok) throw new Error(await errorMessage(res, 'No se pudo cerrar la transferencia'));
 }
 
@@ -123,13 +145,15 @@ function sendChunk(
 	url: string,
 	blob: Blob,
 	signal: AbortSignal,
-	onLoaded: (loaded: number) => void
+	onLoaded: (loaded: number) => void,
+	clientSlug?: string
 ): Promise<{ uploaded: number; complete: boolean }> {
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
 		xhr.open('PUT', url);
 		xhr.responseType = 'json';
 		xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+		for (const [k, v] of Object.entries(clientHeaders(clientSlug))) xhr.setRequestHeader(k, v);
 		xhr.upload.onprogress = (e) => onLoaded(e.loaded);
 		xhr.onload = () => {
 			const body = (xhr.response ?? {}) as { message?: string; uploaded?: number; complete?: boolean };
@@ -196,8 +220,12 @@ export async function uploadTransfer(opts: UploadOptions): Promise<UploadResult>
 				const end = Math.min(offset + CHUNK_SIZE, file.size);
 				const url = `/api/transfers/${created.id}/files/${remote.id}?offset=${offset}&length=${end - offset}`;
 				try {
-					const res = await sendChunk(url, file.slice(offset, end), signal, (loaded) =>
-						report(offset + loaded)
+					const res = await sendChunk(
+						url,
+						file.slice(offset, end),
+						signal,
+						(loaded) => report(offset + loaded),
+						opts.clientSlug
 					);
 					offset = res.uploaded;
 					attempts = 0;
@@ -215,7 +243,7 @@ export async function uploadTransfer(opts: UploadOptions): Promise<UploadResult>
 						continue;
 					}
 					await sleep(Math.min(1000 * 2 ** (attempts - 1), 8000), signal);
-					offset = await fetchUploaded(created.id, remote.id, signal).catch(() => offset);
+					offset = await fetchUploaded(created.id, remote.id, signal, opts.clientSlug).catch(() => offset);
 				}
 			}
 
@@ -224,12 +252,16 @@ export async function uploadTransfer(opts: UploadOptions): Promise<UploadResult>
 			doneBytes += file.size;
 		}
 
-		await finish(created.id, signal);
+		await finish(created.id, signal, opts.clientSlug);
 		return { id: created.id, url: `${location.origin}/t/${created.id}` };
 	} catch (e) {
 		if (e instanceof UploadAborted || signal.aborted) {
 			// Limpieza de cortesía: borra lo que alcanzó a subir (sin esperar la respuesta).
-			fetch(`/api/transfers/${created.id}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+			fetch(`/api/transfers/${created.id}`, {
+				method: 'DELETE',
+				keepalive: true,
+				headers: clientHeaders(opts.clientSlug)
+			}).catch(() => {});
 			throw new UploadAborted();
 		}
 		throw e;

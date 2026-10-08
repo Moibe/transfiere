@@ -6,7 +6,12 @@
 </script>
 
 <svelte:head>
-	<title>Transferencias · Transfiere</title>
+	<title>Transferencias · {data.client.name}</title>
+	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<TransferList transfers={data.transfers} />
+<TransferList
+	transfers={data.transfers}
+	clientSlug={data.client.slug}
+	sendHref="/c/{data.client.slug}"
+/>

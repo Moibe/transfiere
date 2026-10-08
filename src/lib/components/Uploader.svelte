@@ -15,6 +15,9 @@
 
 	type Phase = 'idle' | 'uploading' | 'done' | 'error';
 
+	/** En el portal de un negocio: sube como ese cliente y personaliza los textos. */
+	let { clientSlug, clientName }: { clientSlug?: string; clientName?: string } = $props();
+
 	const EXPIRY_OPTIONS = [
 		{ days: 1, label: '1 día' },
 		{ days: 3, label: '3 días' },
@@ -110,7 +113,8 @@
 				message,
 				days,
 				signal: controller.signal,
-				onProgress: (p) => (progress = p)
+				onProgress: (p) => (progress = p),
+				clientSlug
 			});
 			phase = 'done';
 		} catch (e) {
@@ -152,7 +156,13 @@
 	{#if phase === 'idle' || phase === 'error'}
 		<section class="hero" in:fade={{ duration: 180 }}>
 			<h1>Manda archivos <span class="text-grad">pesados</span> sin drama.</h1>
-			<p class="muted">Súbelos, copia el link y mándaselo. Así de fácil.</p>
+			<p class="muted">
+				{#if clientName}
+					Tus clientes reciben un link con la marca de {clientName}.
+				{:else}
+					Súbelos, copia el link y mándaselo. Así de fácil.
+				{/if}
+			</p>
 		</section>
 
 		<section class="card uploader">
