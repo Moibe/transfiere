@@ -2,6 +2,7 @@
 	// Página pública del link: aquí aterriza quien recibe los archivos.
 	import { invalidateAll } from '$app/navigation';
 	import Icon from '$lib/components/Icon.svelte';
+	import MadeBy from '$lib/components/MadeBy.svelte';
 	import { fileExt, formatBytes, formatDate, formatRemaining, pluralFiles } from '$lib/format';
 	import type { PublicFile } from '$lib/types';
 	import type { PageProps } from './$types';
@@ -87,9 +88,7 @@
 			{/if}
 		{/if}
 	</section>
-	<p class="foot muted">
-		Hecho con <Icon name="heart" size={13} /> en transfiere.moibe.me
-	</p>
+	<MadeBy />
 </div>
 
 <style>
@@ -210,11 +209,6 @@
 	.all {
 		margin-top: 1.3rem;
 		min-width: 60%;
-	}
-	.foot {
-		text-align: center;
-		font-size: 0.82rem;
-		margin-top: 1.4rem;
 	}
 	@media (max-width: 480px) {
 		.files li {

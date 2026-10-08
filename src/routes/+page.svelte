@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Icon from '$lib/components/Icon.svelte';
+	import MadeBy from '$lib/components/MadeBy.svelte';
 	import Uploader from '$lib/components/Uploader.svelte';
 	import type { PageProps } from './$types';
 
@@ -59,6 +60,8 @@
 {:else}
 	<Uploader />
 {/if}
+
+<MadeBy />
 
 <style>
 	.gate {
